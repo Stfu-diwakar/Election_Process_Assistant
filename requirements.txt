@@ -5,3 +5,5 @@ gunicorn==22.0.0
 pytest==8.2.2
 google-cloud-logging==3.10.0
 Flask-Limiter==3.8.0
+google-cloud-firestore==2.14.0
+google-cloud-error-reporting==1.11.0
