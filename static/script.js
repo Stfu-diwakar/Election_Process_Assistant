@@ -52,7 +52,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const chatInput = document.getElementById('chat-input');
     const chatMessages = document.getElementById('chat-messages');
 
-    // 1. Initialize Timeline
+
     function renderTimeline() {
         timelineData.forEach((step, index) => {
             const item = document.createElement('div');
@@ -62,7 +62,7 @@ document.addEventListener('DOMContentLoaded', () => {
             item.setAttribute('aria-expanded', 'false');
             item.setAttribute('aria-controls', 'step-details');
             
-            // Render HTML for timeline item
+
             item.innerHTML = `
                 <div class="timeline-marker">${step.id}</div>
                 <div class="timeline-content">
@@ -71,7 +71,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 </div>
             `;
 
-            // Event listeners for interaction
+
             item.addEventListener('click', () => selectStep(step, item));
             item.addEventListener('keydown', (e) => {
                 if (e.key === 'Enter' || e.key === ' ') {
@@ -84,9 +84,9 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 
-    // 2. Handle Timeline Selection
+
     function selectStep(step, itemElement) {
-        // Update active class
+
         document.querySelectorAll('.timeline-item').forEach(el => {
             el.classList.remove('active');
             el.setAttribute('aria-expanded', 'false');
@@ -94,7 +94,7 @@ document.addEventListener('DOMContentLoaded', () => {
         itemElement.classList.add('active');
         itemElement.setAttribute('aria-expanded', 'true');
 
-        // Update details panel
+
         let detailsList = step.details.map(d => `<li>${d}</li>`).join('');
         stepDetailsContainer.innerHTML = `
             <h2 id="assistant-heading">${step.title}</h2>
@@ -103,17 +103,17 @@ document.addEventListener('DOMContentLoaded', () => {
         `;
     }
 
-    // 3. Handle Chat Submission
+
     chatForm.addEventListener('submit', async (e) => {
         e.preventDefault();
         const message = chatInput.value.trim();
         if (!message) return;
 
-        // Add user message to UI
+
         addMessage(message, 'user');
         chatInput.value = '';
         
-        // Disable input while loading
+
         chatInput.disabled = true;
         chatForm.querySelector('button').disabled = true;
 
@@ -136,19 +136,19 @@ document.addEventListener('DOMContentLoaded', () => {
         } catch (error) {
             addMessage("Unable to connect to the assistant. Please try again later.", 'assistant');
         } finally {
-            // Re-enable input
+
             chatInput.disabled = false;
             chatForm.querySelector('button').disabled = false;
             chatInput.focus();
         }
     });
 
-    // Utility: Add message to chat box
+
     function addMessage(text, sender) {
         const msgElement = document.createElement('div');
         msgElement.className = `message ${sender}`;
         
-        // Simple markdown parsing for bold text
+
         const formattedText = text.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>');
         msgElement.innerHTML = `<p>${formattedText}</p>`;
         
@@ -156,12 +156,132 @@ document.addEventListener('DOMContentLoaded', () => {
         chatMessages.scrollTop = chatMessages.scrollHeight;
     }
 
-    // Initial setup
+
     renderTimeline();
     
-    // Select the first item by default
+
     const firstItem = timelineContainer.querySelector('.timeline-item');
     if (firstItem) {
         selectStep(timelineData[0], firstItem);
+    }
+
+    const canvas = document.getElementById('bg-canvas');
+    if (canvas) {
+        const ctx = canvas.getContext('2d');
+        let width, height;
+        let particles = [];
+        const numParticles = window.innerWidth < 768 ? 40 : 80;
+        const maxDistance = 150;
+        
+        let mouse = {
+            x: null,
+            y: null,
+            radius: 150
+        };
+
+        window.addEventListener('mousemove', function(event) {
+            mouse.x = event.x;
+            mouse.y = event.y;
+        });
+        
+        window.addEventListener('mouseout', function() {
+            mouse.x = undefined;
+            mouse.y = undefined;
+        });
+
+        function resize() {
+            width = canvas.width = window.innerWidth;
+            height = canvas.height = window.innerHeight;
+        }
+
+        window.addEventListener('resize', () => {
+            resize();
+            initParticles();
+        });
+
+        class Particle {
+            constructor() {
+                this.x = Math.random() * width;
+                this.y = Math.random() * height;
+                this.vx = (Math.random() - 0.5) * 1.5;
+                this.vy = (Math.random() - 0.5) * 1.5;
+                this.radius = Math.random() * 2 + 1;
+            }
+
+            update() {
+                if (this.x > width || this.x < 0) this.vx = -this.vx;
+                if (this.y > height || this.y < 0) this.vy = -this.vy;
+
+                // Mouse interaction
+                if (mouse.x != null && mouse.y != null) {
+                    let dx = mouse.x - this.x;
+                    let dy = mouse.y - this.y;
+                    let distance = Math.sqrt(dx * dx + dy * dy);
+                    if (distance < mouse.radius) {
+                        const forceDirectionX = dx / distance;
+                        const forceDirectionY = dy / distance;
+                        const maxDistance = mouse.radius;
+                        const force = (maxDistance - distance) / maxDistance;
+                        const directionX = forceDirectionX * force * 5;
+                        const directionY = forceDirectionY * force * 5;
+                        
+                        this.x -= directionX;
+                        this.y -= directionY;
+                    }
+                }
+
+                this.x += this.vx;
+                this.y += this.vy;
+            }
+
+            draw() {
+                ctx.beginPath();
+                ctx.arc(this.x, this.y, this.radius, 0, Math.PI * 2);
+                ctx.fillStyle = 'rgba(79, 70, 229, 0.5)';
+                ctx.fill();
+            }
+        }
+
+        function initParticles() {
+            particles = [];
+            for (let i = 0; i < numParticles; i++) {
+                particles.push(new Particle());
+            }
+        }
+
+        function connect() {
+            for (let a = 0; a < particles.length; a++) {
+                for (let b = a; b < particles.length; b++) {
+                    let dx = particles[a].x - particles[b].x;
+                    let dy = particles[a].y - particles[b].y;
+                    let distance = dx * dx + dy * dy;
+
+                    if (distance < maxDistance * maxDistance) {
+                        let opacity = 1 - (distance / (maxDistance * maxDistance));
+                        ctx.strokeStyle = `rgba(236, 72, 153, ${opacity * 0.4})`;
+                        ctx.lineWidth = 1;
+                        ctx.beginPath();
+                        ctx.moveTo(particles[a].x, particles[a].y);
+                        ctx.lineTo(particles[b].x, particles[b].y);
+                        ctx.stroke();
+                    }
+                }
+            }
+        }
+
+        function animate() {
+            requestAnimationFrame(animate);
+            ctx.clearRect(0, 0, width, height);
+
+            for (let i = 0; i < particles.length; i++) {
+                particles[i].update();
+                particles[i].draw();
+            }
+            connect();
+        }
+
+        resize();
+        initParticles();
+        animate();
     }
 });
