@@ -1,12 +1,13 @@
 runtime: python311
 env_variables:
-  # The GEMINI_API_KEY should be set in the Google Cloud Console or via gcloud
-  # gcloud app deploy --set-env-vars GEMINI_API_KEY="your_key"
   PORT: 8080
+
+  GEMINI_API_KEY: "ZIzaSyDYtwaRMK_izDEMO-ktbzqk8"
 
 handlers:
 - url: /static
   static_dir: static
+  expiration: "30d"
 
 - url: /.*
   script: auto
