@@ -1,5 +1,7 @@
 import os
 import functools
+from typing import Any, Tuple, Union
+from datetime import datetime
 from flask import Flask, request, jsonify, render_template, send_from_directory
 from flask_limiter import Limiter
 from flask_limiter.util import get_remote_address
@@ -7,12 +9,20 @@ import google.generativeai as genai
 from dotenv import load_dotenv
 
 
+error_client = None
+firestore_db = None
+
 try:
     import google.cloud.logging
+    from google.cloud import error_reporting, firestore
+    
     client = google.cloud.logging.Client()
     client.setup_logging()
+    
+    error_client = error_reporting.Client()
+    firestore_db = firestore.Client()
 except Exception as e:
-    print(f"Google Cloud Logging not initialized: {e}")
+    print(f"Google Cloud Services partially or fully not initialized: {e}")
 
 
 load_dotenv()
@@ -54,7 +64,7 @@ def add_security_headers(response):
     return response
 
 @functools.lru_cache(maxsize=128)
-def get_cached_response(prompt):
+def get_cached_response(prompt: str) -> Any:
     """Get response from Gemini, caching identical prompts for efficiency."""
     if not model:
         raise Exception("Model not initialized")
@@ -62,7 +72,7 @@ def get_cached_response(prompt):
 
 @app.route('/api/chat', methods=['POST'])
 @limiter.limit("10 per minute")
-def chat():
+def chat() -> Union[Tuple[Any, int], Any]:
     """Handle chat requests to the Gemini API."""
     if not model:
         return jsonify({"error": "Gemini API is not configured or failed to initialize."}), 500
@@ -86,9 +96,22 @@ def chat():
 
     try:
         response = get_cached_response(prompt)
+        
+        if firestore_db:
+            try:
+                firestore_db.collection("chat_logs").add({
+                    "user_message": user_message,
+                    "response": response.text,
+                    "timestamp": datetime.utcnow()
+                })
+            except Exception as db_err:
+                print(f"Failed to write to Firestore: {db_err}")
+
         return jsonify({"response": response.text})
     except Exception as e:
         print(f"Error generating content: {e}")
+        if error_client:
+            error_client.report_exception()
         return jsonify({"error": "An error occurred while communicating with the AI."}), 500
 
 if __name__ == '__main__':
