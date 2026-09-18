@@ -2,7 +2,7 @@
   <h1>🗳️ Election Process Education Assistant</h1>
   <p>An interactive, AI-powered educational platform designed to help voters navigate the election process.</p>
   
-  [![Live Demo](https://img.shields.io/badge/Live_Demo-View_Project-blue?style=for-the-badge&logo=googlecloud)](https://election-assistant-dwkr.el.r.appspot.com/)
+  [![Live Demo](https://img.shields.io/badge/Live_Demo-View_Project-blue?style=for-the-badge&logo=googlecloud)](https://election-process-assistant-56mk.onrender.com/)
   <br />
 </div>
 
